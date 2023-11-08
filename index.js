@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config()
 const app = express();
@@ -28,7 +29,17 @@ async function run() {
 
 
         const assignmentCollection = client.db('groupDB').collection('assignments');
+        const submitCollection = client.db('groupDB').collection('submittedAssignments');
 
+        // auth related api
+        app.post('/jwt', async (req, res) => {
+            const user = req.body;
+            console.log(user);
+            res.send(user);
+        })
+
+
+        // assignment related api
         app.get('/assignments', async (req, res) => {
             const cursor = assignmentCollection.find();
             const result = await cursor.toArray();
@@ -48,6 +59,15 @@ async function run() {
             const result = await assignmentCollection.findOne(query);
             res.send(result);
         })
+
+        // app.get('/assignments/:email', async (req, res) =>{
+        //     const email = req.params.email;
+        //     console.log(email);
+        //     const query = {user_email : email}
+        //     console.log(query);
+        //     const result = await assignmentCollection.find(query).toArray();
+        //     res.send(result);
+        // })
 
         app.post('/assignments', async (req, res) => {
             const newAssignment = req.body;
@@ -70,11 +90,25 @@ async function run() {
                     thumbnail: updatedAssignment.thumbnail,
                     marks: updatedAssignment.marks,
                     due_date: updatedAssignment.due_date,
-                    user_email: updatedAssignment.user_email
+                    user_email: updatedAssignment.user_email,
+                    user_name: updatedAssignment.user_name
                 }
             }
 
             const result = await assignmentCollection.updateOne(filter, assignment, options)
+            res.send(result);
+        })
+
+        // submittedAssignments
+
+        app.get('/submittedAssignments', async (req, res) => {
+            const result = await submitCollection.find().toArray();
+            res.send(result);
+        })
+        app.post('/submittedAssignments', async (req, res) => {
+            const submitAssignment = req.body;
+            console.log(submitAssignment);
+            const result = await submitCollection.insertOne(submitAssignment);
             res.send(result);
         })
 
