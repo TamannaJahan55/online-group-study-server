@@ -40,12 +40,27 @@ async function run() {
 
 
         // assignment related api
+
         app.get('/assignments', async (req, res) => {
-            const cursor = assignmentCollection.find();
+            const page = parseInt(req.query.page);
+            const size = parseInt(req.query.size);
+            console.log('pagination query', page, size)
+            const cursor = assignmentCollection.find().skip(page * size).limit(size);
             const result = await cursor.toArray();
             res.send(result);
         })
 
+        app.get('/assignmentsCount', async (req, res) => {
+            const count = await assignmentCollection.estimatedDocumentCount();
+            res.send({count});
+        })
+
+        // app.get('/assignments/difficulty/:level', async (req, res) => {
+        //     const level = req.params.level;
+        //     const query = { assignment_difficulty_level: level}
+        //     const result = await assignmentCollection.find(query).toArray();
+        //     res.send(result);
+        // })
         app.get('/assignments/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
@@ -99,12 +114,39 @@ async function run() {
             res.send(result);
         })
 
-        // submittedAssignments
+        // submittedAssignments auth related api
+
+        // app.get('/submittedAssignments', async (req, res) => {
+        //     console.log(req.query.email);
+        //     let query = {};
+        //     if (req.query?.user_email) {
+        //         query = { user_email: req.query.email }
+        //     }
+        //     const result = await submitCollection.find(query).toArray();
+        //     res.send(result);
+        // })
 
         app.get('/submittedAssignments', async (req, res) => {
             const result = await submitCollection.find().toArray();
             res.send(result);
         })
+
+        app.get('/submittedAssignment/:email', async (req, res) => {
+            const email = req.params.email;
+            console.log(email);
+            const query = { user_email: email }
+            console.log(query);
+            const result = await submitCollection.find(query).toArray();
+            res.send(result);
+        })
+
+        app.get('/submittedAssignments/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await submitCollection.findOne(query);
+            res.send(result);
+        })
+
         app.post('/submittedAssignments', async (req, res) => {
             const submitAssignment = req.body;
             console.log(submitAssignment);
@@ -112,9 +154,46 @@ async function run() {
             res.send(result);
         })
 
-        app.delete('/submittedAssignments/:id', async(req, res) => {
+        app.patch('/submittedAssignments/:id', async (req, res) => {
             const id = req.params.id;
-            const query = { _id : new ObjectId(id) }
+            const filter = { _id: new ObjectId(id) }
+            const options = { upsert: true }
+            const markingAssignment = req.body;
+            console.log(markingAssignment, id)
+            const assignment = {
+                $set: {
+                    status: 'completed',
+                    obtained_marks: markingAssignment.obtained_marks,
+                    feedback: markingAssignment.feedback,
+                 
+            }
+        }
+        console.log(assignment)
+
+            const result = await submitCollection.updateOne(filter, assignment, options)
+            res.send(result);
+        })
+
+        // app.patch('/submittedAssignments/:id', async (req, res) => {
+        //     const id = req.params.id;
+        //     const filter = { _id: new ObjectId(id) }
+        //     const updatedAssignment = req.body;
+        //     console.log(updatedAssignment);
+        //     const updateDoc = {
+        //         $set: {
+        //             status: updatedAssignment.status,
+        //             obtained_marks: updatedAssignment.obtained_marks,
+        //             feedback: updatedAssignment.feedback
+        //         },
+        //     };
+        //     const result = await submitCollection.updateOne(filter, updateDoc);
+        //     res.send(result);
+
+        // })
+
+        app.delete('/submittedAssignments/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
             const result = await submitCollection.deleteOne(query);
             res.send(result);
         })
